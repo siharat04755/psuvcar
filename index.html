@@ -209,13 +209,32 @@ function demoPost(p){
   else if(p.action==="setConfig"){ config[p.key]=p.value; }
   demoSave(); return Promise.resolve({ok:true});
 }
+/* แปลงค่าวันที่/เวลาที่อาจกลับมาในรูปแบบ Date object หรือ ISO string ให้เป็นข้อความสะอาด */
+function normDate(v){
+  if(v==null||v==="") return "";
+  const s=String(v);
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d=new Date(s);
+  if(!isNaN(d.getTime())) return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  return s;
+}
+function normTime(v){
+  if(v==null||v==="") return "";
+  const s=String(v);
+  const m=s.match(/^(\d{1,2}):(\d{2})/); if(m) return m[1].padStart(2,"0")+":"+m[2];
+  const d=new Date(s);
+  if(!isNaN(d.getTime())) return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  return s;
+}
+function normBooking(b){ return Object.assign({}, b, {date:normDate(b.date), start:normTime(b.start), end:normTime(b.end)}); }
+
 async function refresh(){
-  try{ const d=await apiLoad(); cars=d.cars; bookings=d.bookings; config=d.config||{}; conn.ok=true; conn.error=null; conn.last=new Date(); }
+  try{ const d=await apiLoad(); cars=d.cars||[]; bookings=(d.bookings||[]).map(normBooking); config=d.config||{}; conn.ok=true; conn.error=null; conn.last=new Date(); }
   catch(e){ conn.ok=false; conn.error=String(e.message||e); }
   render();
 }
 
-function todayStr(){ return new Date().toISOString().slice(0,10); }
+function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function uid(){ return "b"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function toMin(t){ const [h,m]=String(t).split(":").map(Number); return h*60+m; }
 function overlap(a1,a2,b1,b2){ return a1<b2 && b1<a2; }
@@ -410,7 +429,7 @@ function renderCalendar(){
   document.getElementById("cal-prev").addEventListener("click",()=>{calDate=shiftDate(calDate,-1);renderCalendar();});
   document.getElementById("cal-next").addEventListener("click",()=>{calDate=shiftDate(calDate,1);renderCalendar();});
 }
-function shiftDate(s,d){ const x=new Date(s+"T00:00:00"); x.setDate(x.getDate()+d); return x.toISOString().slice(0,10); }
+function shiftDate(s,d){ const x=new Date(s+"T00:00:00"); x.setDate(x.getDate()+d); return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0"); }
 
 function renderAdmin(){
   const el=document.getElementById("view-admin");
