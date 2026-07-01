@@ -85,10 +85,32 @@
   .req-main .when{font-weight:600;font-size:14.5px}
   .req-meta{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
   .req-purpose{font-size:13px;margin-top:4px}
+  .req-detail{display:inline-block;margin-top:6px;font-size:12.5px;font-weight:600;color:var(--brand-bright);cursor:pointer}
+  .req-detail:hover{text-decoration:underline}
+  .reqbadge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap}
+  .reqbadge.admin{background:#E4F0EB;color:var(--brand)}
+  .reqbadge.patient{background:#FBE6E6;color:#A14040}
   .req-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .assign-sel{width:auto;min-width:220px;max-width:300px;padding:8px 10px;font-size:13.5px}
   #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(1200px 600px at 50% -10%, #1E8C6E22, transparent), var(--bg)}
   #login-screen[hidden]{display:none!important}
+  .segment{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+  .segment button{flex:1;min-width:180px;appearance:none;border:1.5px solid var(--line);background:#fff;color:var(--ink-soft);font-family:inherit;font-weight:600;font-size:14.5px;padding:14px 16px;border-radius:12px;cursor:pointer;text-align:left;transition:all .15s;display:flex;flex-direction:column;gap:2px}
+  .segment button .seg-sub{font-size:11.5px;font-weight:400;color:var(--cancel)}
+  .segment button:hover{border-color:var(--brand-bright)}
+  .segment button.on{border-color:var(--brand);background:var(--brand-tint);color:var(--brand)}
+  .segment button.on .seg-sub{color:var(--brand-bright)}
+  .opt-group{display:flex;flex-direction:column;gap:8px}
+  .opt{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;cursor:pointer;font-size:14px;background:#FBFCFC}
+  .opt:hover{border-color:var(--brand-bright)}
+  .opt.on{border-color:var(--brand);background:var(--brand-tint)}
+  .opt input{width:auto;margin:2px 0 0;flex-shrink:0}
+  .opt-inline{display:flex;gap:8px;flex-wrap:wrap}
+  .opt-inline .opt{flex:1;min-width:120px}
+  .file-drop{border:1.5px dashed var(--line);border-radius:10px;padding:14px;text-align:center;font-size:13px;color:var(--ink-soft);background:#FBFCFC}
+  .file-drop input{display:none}
+  .file-drop label{display:inline-block;cursor:pointer;color:var(--brand-bright);font-weight:600}
+  .file-status{font-size:12.5px;color:var(--available);margin-top:8px}
   .login-card{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:38px 32px;max-width:380px;width:100%;text-align:center}
   .login-logo{width:64px;height:64px;border-radius:16px;background:var(--brand);color:#fff;display:grid;place-items:center;margin:0 auto 18px}
   .login-logo svg{width:36px;height:36px}
@@ -208,6 +230,13 @@ const SEED_DRIVERS=[
 let cars=[], drivers=[], bookings=[], config={};
 let me=null, role="user", idToken=null, authReady=false;
 let view="book", calDate=todayStr(), filters={date:"",carId:"",status:""}, bookFormCache={};
+let reqType="admin", form={};
+const VEHICLE_TYPES=["รถพยาบาล (ออกหน่วย)","รถตู้ธุรการ","รถกระบะธุรการ"];
+const PERSONNEL=["แพทย์","นักฉุกเฉินการแพทย์ หรือพยาบาล","จฉพ./พฉพ./ผู้ช่วยพยาบาล","ไม่ใช้บุคลากรแผนกฉุกเฉิน"];
+const ADMIN_EQUIP=["กล่องยาออกหน่วย"];
+const JOB_TYPES=["Refer IN","Refer Out","Service (รับ-ส่งทั่วไป)"];
+const PATIENT_EQUIP=["ไม่ใช้","low flow Oxygen (cannula, mask with bag)","high flow oxygen (ETT, HFNC)","IVF","High Alert drug or Sedation drug","Surgical drain (ICD, Post-op drain)","Non surgical drain (NG, foley's)","อุปกรณ์ยกเคลื่อนย้าย (ไม่สามารถขยับตัวได้)"];
+const REQ_LABEL={admin:"ขอรถธุรการ-ออกหน่วย",patient:"ขอรถรับ-ส่งผู้ป่วย"};
 let conn={ok:false,demo:!REMOTE,error:null,last:null}, busy=false;
 
 const _mem={};
@@ -238,7 +267,7 @@ function demoLoad(){ const s=lsGet("fleet:demo")||{}; let c=s.cars; if(!c||!c.le
 function demoSave(){ lsSet("fleet:demo",{cars,drivers,bookings,config}); }
 function demoPost(p){
   if(p.action==="addBooking"){
-    bookings.push({id:p.id,carId:p.carId||"",driverId:p.driverId||"",date:p.date,start:p.start,end:p.end,driver:p.driver,owner:p.owner,phone:p.phone||"",pax:p.pax||"",purpose:p.purpose,status:p.status,created:p.created});
+    bookings.push({id:p.id,reqType:p.reqType||"",carId:p.carId||"",driverId:p.driverId||"",date:p.date,start:p.start,end:p.end,driver:p.driver,owner:p.owner,ownerEmail:p.ownerEmail||"",dept:p.dept||"",phone:p.phone||"",purpose:p.purpose||"",location:p.location||"",fileUrl:p.fileUrl||"",fileName:p.fileName||"",details:p.details||"",status:p.status,created:p.created});
   } else if(p.action==="assignCar"){
     const t=bookings.find(x=>x.id===p.id);
     if(t){ const carClash=bookings.some(x=>x.id!==t.id&&String(x.carId)===String(p.carId)&&x.status!=="cancelled"&&x.date===t.date&&overlap(toMin(t.start),toMin(t.end),toMin(x.start),toMin(x.end)));
@@ -272,7 +301,7 @@ function normTime(v){
   if(!isNaN(d.getTime())) return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
   return s;
 }
-function normBooking(b){ return Object.assign({}, b, {date:normDate(b.date), start:normTime(b.start), end:normTime(b.end)}); }
+function normBooking(b){ let d={}; try{ d=b.details?JSON.parse(b.details):{}; }catch(e){ d={}; } return Object.assign({}, b, {date:normDate(b.date), start:normTime(b.start), end:normTime(b.end), detailsObj:d}); }
 
 async function refresh(){
   try{ const d=await apiLoad(); cars=d.cars||[]; drivers=d.drivers||[]; bookings=(d.bookings||[]).map(normBooking); config=d.config||{}; conn.ok=true; conn.error=null; conn.last=new Date(); }
@@ -407,65 +436,151 @@ function renderBanner(){
   }
 }
 
+function fv(k){ return form[k]==null?"":form[k]; }
+function radioHtml(key,opts,inline){ const cur=fv(key); return `<div class="${inline?"opt-inline":"opt-group"}">`+opts.map(o=>`<label class="opt ${cur===o?"on":""}"><input type="radio" name="rf-${key}" data-f="${key}" value="${esc(o)}" ${cur===o?"checked":""}><span>${esc(o)}</span></label>`).join("")+`</div>`; }
+function checkHtml(key,opts){ const cur=form[key]||[]; return `<div class="opt-group">`+opts.map(o=>`<label class="opt ${cur.indexOf(o)>=0?"on":""}"><input type="checkbox" data-fc="${key}" value="${esc(o)}" ${cur.indexOf(o)>=0?"checked":""}><span>${esc(o)}</span></label>`).join("")+`</div>`; }
+function fileBlock(){
+  return `<div class="field"><label>เอกสารแนบ (ถ้ามี)</label>
+    <div class="file-drop"><label for="file-input">เลือกไฟล์เพื่อแนบ</label> <span style="font-size:12px">(ไม่เกิน 4MB)</span>
+      <input type="file" id="file-input">
+      <div class="file-status" id="file-status">${form.fileName?("แนบแล้ว: "+esc(form.fileName)):""}</div></div></div>`;
+}
+function commonTop(){
+  const date=fv("date")||todayStr(), start=fv("start")||"09:00", end=fv("end")||"12:00";
+  return `<div class="grid2"><div class="field"><label>เวลาไป</label><input type="time" data-f="start" value="${start}" step="900"></div>
+      <div class="field"><label>เวลากลับ</label><input type="time" data-f="end" value="${end}" step="900"></div></div>
+    <div class="field"><label>วันที่ใช้รถ</label><input type="date" data-f="date" value="${date}" min="${todayStr()}"></div>
+    <div id="book-alert"></div>
+    <div class="grid2"><div class="field"><label>แผนกที่ขอใช้รถ</label><input type="text" data-f="dept" value="${esc(fv("dept"))}" placeholder="เช่น ฉุกเฉิน"></div>
+      <div class="field"><label>เบอร์ติดต่อกลับ</label><input type="tel" data-f="phone" inputmode="tel" value="${esc(fv("phone"))}" placeholder="เช่น 081-234-5678"></div></div>`;
+}
+function formBodyAdmin(){
+  const hasStaff=fv("hasStaff");
+  let extra="";
+  if(hasStaff==="มี"){
+    extra=`<div class="field"><label>บุคลากร (กรณีออกหน่วย)</label>${radioHtml("personnel",PERSONNEL)}</div>
+      <div class="field"><label>อุปกรณ์พิเศษอื่นๆ (กรณีออกหน่วย)</label>${checkHtml("adminEquip",ADMIN_EQUIP)}
+        <label class="opt ${form.adminEquipOther?"on":""}" style="margin-top:8px"><input type="checkbox" data-fbool="adminEquipOther" ${form.adminEquipOther?"checked":""}><span>อื่นๆ (ระบุ)</span></label>
+        ${form.adminEquipOther?`<input type="text" data-f="adminEquipOtherText" value="${esc(fv("adminEquipOtherText"))}" placeholder="ระบุอุปกรณ์อื่นๆ" style="margin-top:8px">`:""}</div>`;
+  }
+  return `${commonTop()}
+    <div class="field"><label>ประเภทรถ</label>${radioHtml("vehicleType",VEHICLE_TYPES)}</div>
+    <div class="field"><label>วัตถุประสงค์ / รายละเอียดงาน</label><textarea data-f="purpose" rows="2" placeholder="เช่น ออกหน่วยแพทย์เคลื่อนที่">${esc(fv("purpose"))}</textarea></div>
+    <div class="field"><label>สถานที่</label><input type="text" data-f="location" value="${esc(fv("location"))}" placeholder="สถานที่ปลายทาง"></div>
+    <div class="grid2"><div class="field"><label>ผู้ประสานงาน</label><input type="text" data-f="coord" value="${esc(fv("coord"))}" placeholder="ชื่อผู้ประสานงาน"></div>
+      <div class="field"><label>เบอร์ผู้ประสานงาน</label><input type="tel" data-f="coordPhone" inputmode="tel" value="${esc(fv("coordPhone"))}" placeholder="เบอร์โทร"></div></div>
+    <div class="field"><label>มีเจ้าหน้าที่ไปกับรถ</label>${radioHtml("hasStaff",["มี","ไม่มี"],true)}</div>
+    ${extra}
+    ${fileBlock()}`;
+}
+function formBodyPatient(){
+  return `${commonTop()}
+    <div class="field"><label>ประเภทงาน</label>${radioHtml("jobType",JOB_TYPES)}</div>
+    <div class="grid2"><div class="field"><label>ชื่อ–สกุลผู้ป่วย</label><input type="text" data-f="patientName" value="${esc(fv("patientName"))}" placeholder="ชื่อ–สกุล"></div>
+      <div class="field"><label>HN ผู้ป่วย</label><input type="text" data-f="hn" value="${esc(fv("hn"))}" placeholder="HN"></div></div>
+    <div class="field"><label>อาการ / ผลการวินิจฉัย</label><textarea data-f="diagnosis" rows="2" placeholder="อาการหรือผลการวินิจฉัย">${esc(fv("diagnosis"))}</textarea></div>
+    <div class="field"><label>สถานที่</label><input type="text" data-f="location" value="${esc(fv("location"))}" placeholder="ต้นทาง–ปลายทาง"></div>
+    <div class="field"><label>ต้องการแพทย์ร่วมนำส่ง</label>${radioHtml("needDoctor",["ใช่","ไม่ใช่"],true)}</div>
+    <div class="field"><label>อุปกรณ์เพิ่มเติมระหว่างเดินทาง (ถ้ามี)</label>${checkHtml("patientEquip",PATIENT_EQUIP)}
+      <label class="opt ${form.patientEquipOther?"on":""}" style="margin-top:8px"><input type="checkbox" data-fbool="patientEquipOther" ${form.patientEquipOther?"checked":""}><span>Other (ระบุ)</span></label>
+      ${form.patientEquipOther?`<input type="text" data-f="patientEquipOtherText" value="${esc(fv("patientEquipOtherText"))}" placeholder="ระบุอุปกรณ์อื่นๆ" style="margin-top:8px">`:""}</div>
+    ${fileBlock()}`;
+}
 function renderBook(){
   const el=document.getElementById("view-book");
-  const f=bookFormCache, date=f.date||todayStr(), start=f.start||"09:00", end=f.end||"12:00";
-  const validTime=toMin(end)>toMin(start);
   const myList=bookings.filter(b=>b.owner===(me&&me.name)&&b.status!=="cancelled"&&b.date>=todayStr()).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
   const statusTH={pending:"รออนุมัติ",approved:"อนุมัติแล้ว"};
   const myHtml=myList.length?`<div class="mine">`+myList.map(b=>{ const c=carById(b.carId), dv=driverById(b.driverId);
       const carLine=b.status==="approved"&&c?`<span class="plate">${esc(c.plate)}</span> ${esc(c.name)}${dv?` · คนขับ ${esc(dv.name)}`:""}`:`<span style="color:var(--pending)">รอจัดสรรรถ</span>`;
       return `<div class="mine-item">
-      <div style="flex:1;min-width:0"><div class="when">${thaiDate(b.date)} · <span class="mono">${b.start}–${b.end}</span></div>
-      <div class="meta">${carLine} · ${esc(b.purpose)}</div></div>
+      <div style="flex:1;min-width:0"><div class="when">${b.reqType?esc(REQ_LABEL[b.reqType]||"")+" · ":""}${thaiDate(b.date)} · <span class="mono">${b.start}–${b.end}</span></div>
+      <div class="meta">${carLine} · ${esc(b.purpose||"")}</div></div>
       <span class="tag ${b.status}">${statusTH[b.status]}</span>
       <button class="btn btn-danger btn-sm" data-mycancel="${b.id}">ยกเลิก</button></div>`; }).join("")+`</div>`
     :`<div class="empty-state small">ยังไม่มีคำขอที่กำลังจะถึงของคุณ</div>`;
-  el.innerHTML=`<div class="layout">
-    <div class="panel pad">
-      <div class="eyebrow">แบบฟอร์มขอใช้รถ</div><h2 class="sec" style="margin-top:6px">รายละเอียดการเดินทาง</h2>
-      <div class="read-ident"><span class="avatar">${esc(me?me.name.charAt(0):"?")}</span><span>ขอในนาม <b>${me?esc(me.name):"—"}</b></span><a id="edit-name">เปลี่ยนชื่อ</a></div>
-      <div id="book-alert"></div>
-      <div class="field"><label for="bk-date">วันที่ใช้รถ</label><input type="date" id="bk-date" value="${date}" min="${todayStr()}"></div>
-      <div class="grid2"><div class="field"><label for="bk-start">เวลาออก</label><input type="time" id="bk-start" value="${start}" step="900"></div>
-        <div class="field"><label for="bk-end">เวลากลับ</label><input type="time" id="bk-end" value="${end}" step="900"></div></div>
-      <div class="grid2"><div class="field"><label for="bk-phone">เบอร์ติดต่อกลับ</label><input type="tel" id="bk-phone" inputmode="tel" placeholder="เช่น 081-234-5678" value="${esc(f.phone||"")}"></div>
-        <div class="field"><label for="bk-pax">จำนวนผู้ใช้รถ</label><input type="number" id="bk-pax" min="1" max="60" placeholder="เช่น 3" value="${esc(f.pax||"")}"></div></div>
-      <div class="field"><label for="bk-purpose">วัตถุประสงค์ / ปลายทาง</label><textarea id="bk-purpose" rows="2" placeholder="เช่น ประชุมลูกค้าที่บางนา">${esc(f.purpose||"")}</textarea></div>
-      ${validTime?"":`<div class="alert err">เวลากลับต้องอยู่หลังเวลาออก</div>`}
-      <button class="btn btn-primary btn-block" id="bk-submit" ${busy?"disabled":""}>ส่งคำขอจองรถ</button>
-      <p style="font-size:12.5px;color:var(--ink-soft);margin:12px 0 0">ส่งคำขอแล้ว ผู้ดูแลจะเป็นผู้จัดสรรรถและอนุมัติให้ คุณดูสถานะได้ที่ “คำขอของฉัน”</p>
+  el.innerHTML=`
+    <div class="segment">
+      <button class="${reqType==="admin"?"on":""}" data-req="admin">ขอรถธุรการ–ออกหน่วย<span class="seg-sub">ออกหน่วย/งานธุรการทั่วไป</span></button>
+      <button class="${reqType==="patient"?"on":""}" data-req="patient">ขอรถรับ–ส่งผู้ป่วย<span class="seg-sub">Refer / รับ-ส่งผู้ป่วย</span></button>
     </div>
-    <div class="panel pad"><div class="eyebrow">ของฉัน</div>
-      <h2 class="sec" style="margin-top:6px">คำขอที่กำลังจะถึงของฉัน</h2>${myHtml}</div>
+    <div class="layout">
+      <div class="panel pad">
+        <div class="eyebrow">${esc(REQ_LABEL[reqType])}</div><h2 class="sec" style="margin-top:6px">แบบฟอร์มขอใช้รถ</h2>
+        <div class="read-ident"><span class="avatar">${esc(me?String(me.name).charAt(0):"?")}</span><span>ขอในนาม <b>${me?esc(me.name):"—"}</b></span></div>
+        ${reqType==="admin"?formBodyAdmin():formBodyPatient()}
+        <button class="btn btn-primary btn-block" id="bk-submit" ${busy?"disabled":""} style="margin-top:6px">ส่งคำขอจองรถ</button>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin:12px 0 0">ส่งคำขอแล้ว ผู้ดูแลจะเป็นผู้จัดสรรรถและอนุมัติให้ ดูสถานะได้ที่ “คำขอของฉัน”</p>
+      </div>
+      <div class="panel pad"><div class="eyebrow">ของฉัน</div>
+        <h2 class="sec" style="margin-top:6px">คำขอที่กำลังจะถึงของฉัน</h2>${myHtml}</div>
     </div>`;
-  ["bk-date","bk-start","bk-end","bk-phone","bk-pax","bk-purpose"].forEach(id=>{
-    const elx=document.getElementById(id); if(!elx) return;
-    elx.addEventListener("input",()=>{
-      bookFormCache={date:gv("bk-date"),start:gv("bk-start"),end:gv("bk-end"),phone:gv("bk-phone"),pax:gv("bk-pax"),purpose:gv("bk-purpose")};
-      if(["bk-start","bk-end"].includes(id)){ const box=document.getElementById("book-alert"); if(box) box.innerHTML=toMin(gv("bk-end"))>toMin(gv("bk-start"))?"":`<div class="alert err">เวลากลับต้องอยู่หลังเวลาออก</div>`; }
-    });
+  el.querySelectorAll("[data-req]").forEach(b=>b.addEventListener("click",()=>{ reqType=b.dataset.req; renderBook(); }));
+  el.querySelectorAll("[data-f]").forEach(inp=>{
+    if(inp.type==="radio"){ inp.addEventListener("change",()=>{ if(inp.checked){ form[inp.dataset.f]=inp.value; renderBook(); } }); }
+    else { inp.addEventListener("input",()=>{ form[inp.dataset.f]=inp.value; if(inp.dataset.f==="start"||inp.dataset.f==="end"){ const box=document.getElementById("book-alert"); if(box) box.innerHTML=toMin(fv("end"))>toMin(fv("start"))?"":`<div class="alert err">เวลากลับต้องอยู่หลังเวลาไป</div>`; } }); }
   });
-  function gv(id){ const x=document.getElementById(id); return x?x.value:""; }
-  document.getElementById("edit-name").addEventListener("click",()=>askName(false));
+  el.querySelectorAll("[data-fc]").forEach(inp=>{
+    inp.addEventListener("change",()=>{ const key=inp.dataset.fc; const set=new Set(form[key]||[]);
+      if(inp.checked) set.add(inp.value); else set.delete(inp.value);
+      let a=Array.from(set);
+      if(key==="patientEquip"){ if(inp.value==="ไม่ใช้"&&inp.checked) a=["ไม่ใช้"]; else if(inp.checked) a=a.filter(x=>x!=="ไม่ใช้"); }
+      form[key]=a; renderBook(); });
+  });
+  el.querySelectorAll("[data-fbool]").forEach(inp=>inp.addEventListener("change",()=>{ form[inp.dataset.fbool]=inp.checked; renderBook(); }));
+  const fi=document.getElementById("file-input"); if(fi) fi.addEventListener("change",e=>uploadAttachment(e.target));
   document.getElementById("bk-submit").addEventListener("click",submitRequest);
   el.querySelectorAll("[data-mycancel]").forEach(b=>b.addEventListener("click",()=>updateStatus(b.dataset.mycancel,"cancelled")));
 }
+async function uploadAttachment(inputEl){
+  const file=inputEl.files&&inputEl.files[0]; if(!file) return;
+  const status=document.getElementById("file-status");
+  if(file.size>4*1024*1024){ if(status) status.textContent="ไฟล์ใหญ่เกิน 4MB"; inputEl.value=""; return; }
+  if(status){ status.style.color="var(--ink-soft)"; status.textContent="กำลังอัปโหลด…"; }
+  let b64;
+  try{ b64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=rej; r.readAsDataURL(file); }); }
+  catch(e){ if(status) status.textContent="อ่านไฟล์ไม่สำเร็จ"; return; }
+  if(!REMOTE){ form.fileName=file.name; form.fileUrl="(ทดลอง)"; if(status){ status.style.color="var(--available)"; status.textContent="แนบแล้ว (ทดลอง): "+file.name; } return; }
+  const res=await apiPost({action:"uploadFile",name:file.name,mime:file.type||"application/octet-stream",dataBase64:b64});
+  if(!res.ok||!res.url){ if(status){ status.style.color="var(--booked)"; status.textContent="อัปโหลดไม่สำเร็จ"; } return; }
+  form.fileUrl=res.url; form.fileName=file.name; if(status){ status.style.color="var(--available)"; status.textContent="แนบแล้ว: "+file.name; }
+}
 async function submitRequest(){
   if(busy) return;
-  const date=document.getElementById("bk-date").value,start=document.getElementById("bk-start").value,end=document.getElementById("bk-end").value;
-  const phone=document.getElementById("bk-phone").value.trim(),pax=parseInt(document.getElementById("bk-pax").value)||0;
-  const purpose=document.getElementById("bk-purpose").value.trim(),box=document.getElementById("book-alert"),errs=[];
-  if(!purpose) errs.push("กรอกวัตถุประสงค์/ปลายทาง");
-  if(!phone) errs.push("กรอกเบอร์ติดต่อกลับ");
-  if(!pax||pax<1) errs.push("ระบุจำนวนผู้ใช้รถ");
-  if(toMin(end)<=toMin(start)) errs.push("เวลากลับต้องอยู่หลังเวลาออก");
+  const box=document.getElementById("book-alert"), errs=[];
+  const date=fv("date")||todayStr(), start=fv("start")||"09:00", end=fv("end")||"12:00";
+  if(!fv("dept")) errs.push("ระบุแผนกที่ขอใช้รถ");
+  if(!fv("phone")) errs.push("กรอกเบอร์ติดต่อกลับ");
+  if(toMin(end)<=toMin(start)) errs.push("เวลากลับต้องอยู่หลังเวลาไป");
+  let purpose="", details={};
+  if(reqType==="admin"){
+    if(!fv("vehicleType")) errs.push("เลือกประเภทรถ");
+    if(!fv("purpose")) errs.push("ระบุวัตถุประสงค์/รายละเอียดงาน");
+    if(!fv("hasStaff")) errs.push("ระบุว่ามีเจ้าหน้าที่ไปกับรถหรือไม่");
+    if(fv("hasStaff")==="มี" && !fv("personnel")) errs.push("เลือกบุคลากรที่ไปด้วย");
+    purpose=fv("purpose");
+    details={reqType:"admin", vehicleType:fv("vehicleType"), coordinator:fv("coord"), coordPhone:fv("coordPhone"),
+      hasStaff:fv("hasStaff"), personnel:(fv("hasStaff")==="มี"?fv("personnel"):""),
+      equip:(fv("hasStaff")==="มี"?(form.adminEquip||[]).slice():[]),
+      equipOther:(fv("hasStaff")==="มี"&&form.adminEquipOther?fv("adminEquipOtherText"):"")};
+  } else {
+    if(!fv("jobType")) errs.push("เลือกประเภทงาน");
+    if(!fv("patientName")) errs.push("กรอกชื่อผู้ป่วย");
+    if(!fv("hn")) errs.push("กรอก HN ผู้ป่วย");
+    purpose=`${fv("jobType")||""}${fv("patientName")?" · "+fv("patientName"):""}`;
+    details={reqType:"patient", jobType:fv("jobType"), patientName:fv("patientName"), hn:fv("hn"), diagnosis:fv("diagnosis"),
+      needDoctor:fv("needDoctor"), equip:(form.patientEquip||[]).slice(),
+      equipOther:(form.patientEquipOther?fv("patientEquipOtherText"):"")};
+  }
   if(errs.length){ box.innerHTML=`<div class="alert err">${errs.join(" · ")}</div>`; return; }
   busy=true; toast("กำลังส่งคำขอ…");
-  const res=await apiPost({action:"addBooking",id:uid(),carId:"",driverId:"",date,start,end,driver:me.name,owner:me.name,ownerEmail:(me.email||""),phone,pax,purpose,status:"pending",created:Date.now()});
+  const res=await apiPost({action:"addBooking",id:uid(),reqType,carId:"",driverId:"",date,start,end,
+    driver:me.name,owner:me.name,ownerEmail:(me.email||""),dept:fv("dept"),phone:fv("phone"),
+    purpose,location:fv("location"),fileUrl:(form.fileUrl||""),fileName:(form.fileName||""),
+    details:JSON.stringify(details),status:"pending",created:Date.now()});
   busy=false;
-  if(!res.ok){ box.innerHTML=`<div class="alert err">ส่งคำขอไม่สำเร็จ ลองอีกครั้ง</div>`; return; }
-  bookFormCache={date,start,end}; toast("ส่งคำขอแล้ว · รอผู้ดูแลจัดสรรรถ"); calDate=date; await refresh();
+  if(!res.ok){ box.innerHTML=`<div class="alert err">${res.error==="auth"?"เซสชันหมดอายุ ลงชื่อเข้าใช้ใหม่แล้วลองอีกครั้ง":"ส่งคำขอไม่สำเร็จ ลองอีกครั้ง"}</div>`; return; }
+  const keepType=reqType; form={date,start,end}; reqType=keepType;
+  toast("ส่งคำขอแล้ว · รอผู้ดูแลจัดสรรรถ"); calDate=date; await refresh();
 }
 
 function renderCalendar(){
@@ -496,17 +611,59 @@ function renderCalendar(){
 }
 function shiftDate(s,d){ const x=new Date(s+"T00:00:00"); x.setDate(x.getDate()+d); return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0"); }
 
+function detailLines(b){
+  const d=b.detailsObj||{}, L=[];
+  L.push(["ประเภทคำขอ", REQ_LABEL[b.reqType]||b.reqType||"—"]);
+  L.push(["แผนกที่ขอใช้รถ", b.dept||"—"]);
+  L.push(["วันเวลา", thaiDate(b.date)+"  "+b.start+"–"+b.end]);
+  L.push(["เบอร์ติดต่อกลับ", b.phone||"—"]);
+  if(b.reqType==="patient"){
+    L.push(["ประเภทงาน", d.jobType||"—"]);
+    L.push(["ผู้ป่วย", (d.patientName||"—")+(d.hn?("  ·  HN "+d.hn):"")]);
+    L.push(["อาการ/ผลวินิจฉัย", d.diagnosis||"—"]);
+    L.push(["สถานที่", b.location||"—"]);
+    L.push(["ต้องการแพทย์ร่วมนำส่ง", d.needDoctor||"—"]);
+    const eq=(d.equip||[]).slice().concat(d.equipOther?["Other: "+d.equipOther]:[]);
+    L.push(["อุปกรณ์ระหว่างเดินทาง", eq.length?eq.join(", "):"—"]);
+  } else {
+    L.push(["ประเภทรถที่ขอ", d.vehicleType||"—"]);
+    L.push(["วัตถุประสงค์/รายละเอียดงาน", b.purpose||"—"]);
+    L.push(["สถานที่", b.location||"—"]);
+    L.push(["ผู้ประสานงาน", (d.coordinator||"—")+(d.coordPhone?("  ·  "+d.coordPhone):"")]);
+    L.push(["มีเจ้าหน้าที่ไปกับรถ", d.hasStaff||"—"]);
+    if(d.hasStaff==="มี"){
+      L.push(["บุคลากร", d.personnel||"—"]);
+      const eq=(d.equip||[]).slice().concat(d.equipOther?["อื่นๆ: "+d.equipOther]:[]);
+      L.push(["อุปกรณ์พิเศษ", eq.length?eq.join(", "):"—"]);
+    }
+  }
+  return L;
+}
+function showDetails(id){
+  const b=bookings.find(x=>String(x.id)===String(id)); if(!b) return;
+  const rows=detailLines(b).map(x=>`<tr><td style="color:var(--ink-soft);white-space:nowrap;padding:6px 14px 6px 0;vertical-align:top">${esc(x[0])}</td><td style="padding:6px 0">${esc(x[1])}</td></tr>`).join("");
+  const fileRow=b.fileUrl&&b.fileUrl!=="(ทดลอง)"?`<div style="margin-top:14px"><a href="${esc(b.fileUrl)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">เปิดเอกสารแนบ: ${esc(b.fileName||"ไฟล์")}</a></div>`:(b.fileName?`<p style="font-size:12.5px;color:var(--ink-soft);margin-top:12px">เอกสารแนบ: ${esc(b.fileName)}</p>`:"");
+  openModal(`<h3>รายละเอียดคำขอ</h3><p class="lead">ผู้ขอ: ${esc(b.driver)}${b.ownerEmail?" · "+esc(b.ownerEmail):""}</p>
+    <div style="max-height:60vh;overflow:auto"><table style="width:100%;font-size:13.5px"><tbody>${rows}</tbody></table>${fileRow}</div>
+    <button class="btn btn-primary btn-block" id="dt-close" style="margin-top:18px">ปิด</button>`);
+  document.getElementById("dt-close").addEventListener("click",closeModal);
+}
 function renderAdmin(){
   const el=document.getElementById("view-admin");
   if(role!=="admin"){ el.innerHTML=`<div class="panel pad" style="margin-top:18px"><div class="empty-state">เฉพาะผู้ดูแลเท่านั้น</div></div>`; return; }
   // ส่วนที่ 1: คำขอรอจัดสรรรถ
   const pend=bookings.filter(b=>b.status==="pending").sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
   const pendHtml=pend.length?pend.map(b=>{
-    const free=freeCarsFor(b.date,b.start,b.end,b.id).slice().sort((x,y)=>((y.seats>=b.pax)-(x.seats>=b.pax)));
-    const opts=free.map(c=>`<option value="${c.id}">${esc(c.name)} (${esc(c.plate)}) · ${c.seats} ที่นั่ง${c.seats<b.pax?" · ที่นั่งอาจไม่พอ":""}</option>`).join("");
+    const free=freeCarsFor(b.date,b.start,b.end,b.id).slice();
+    const opts=free.map(c=>`<option value="${c.id}">${esc(c.name)} (${esc(c.plate)}) · ${c.seats} ที่นั่ง</option>`).join("");
     const freeDrv=freeDriversFor(b.date,b.start,b.end,b.id);
     const drvOpts=`<option value="">— ขับเอง / ยังไม่ระบุ —</option>`+freeDrv.map(d=>`<option value="${d.id}">${esc(d.name)}${d.phone?" · "+esc(d.phone):""}</option>`).join("");
     const busyDrv=drivers.length-freeDrv.length;
+    const d=b.detailsObj||{};
+    const typeBadge=`<span class="reqbadge ${b.reqType==="patient"?"patient":"admin"}">${esc(REQ_LABEL[b.reqType]||"—")}</span>`;
+    const kv=b.reqType==="patient"
+      ? `${esc(d.jobType||"")}${d.patientName?" · "+esc(d.patientName):""}${d.hn?" · HN "+esc(d.hn):""}${d.needDoctor==="ใช่"?' · <span style="color:var(--booked)">ต้องมีแพทย์</span>':""}`
+      : `${esc(d.vehicleType||"")}${d.hasStaff==="มี"?" · มีเจ้าหน้าที่"+(d.personnel?" ("+esc(d.personnel)+")":""):""}`;
     const assignUI=free.length
       ? `<select id="assign-${b.id}" class="assign-sel">${opts}</select>
          <select id="driver-${b.id}" class="assign-sel">${drvOpts}</select>
@@ -514,9 +671,10 @@ function renderAdmin(){
       : `<span class="status-pill busy">ไม่มีรถว่างช่วงเวลานี้</span>`;
     return `<div class="req-card">
       <div class="req-main">
-        <div class="when">${thaiDate(b.date)} · <span class="mono">${b.start}–${b.end}</span></div>
-        <div class="req-meta">${esc(b.driver)} · ${b.pax||"?"} คน · โทร <span class="mono">${esc(b.phone||"—")}</span>${busyDrv>0?` · <span style="color:var(--cancel)">คนขับติดงาน ${busyDrv} คน</span>`:""}</div>
-        <div class="req-purpose">${esc(b.purpose)}</div>
+        <div class="when">${typeBadge} ${thaiDate(b.date)} · <span class="mono">${b.start}–${b.end}</span></div>
+        <div class="req-meta">${esc(b.driver)} · ${esc(b.dept||"—")} · โทร <span class="mono">${esc(b.phone||"—")}</span>${busyDrv>0?` · <span style="color:var(--cancel)">คนขับติดงาน ${busyDrv} คน</span>`:""}</div>
+        <div class="req-purpose">${kv||esc(b.purpose||"")}</div>
+        <a class="req-detail" data-detail="${b.id}">ดูรายละเอียดทั้งหมด${b.fileUrl?" · มีเอกสารแนบ":""}</a>
       </div>
       <div class="req-actions">${assignUI}<button class="btn btn-danger btn-sm" data-cancel="${b.id}">ปฏิเสธ</button></div>
     </div>`;
@@ -535,7 +693,8 @@ function renderAdmin(){
     const drvCell=b.driverId?(dv?esc(dv.name):`<span style="color:var(--cancel)">(ลบแล้ว)</span>`):(b.status==="approved"?`<span style="color:var(--ink-soft)">ขับเอง</span>`:"—");
     return `<tr class="${b.status==="cancelled"?"cancelled":""}"><td>${thaiDate(b.date)}</td><td class="mono">${b.start}–${b.end}</td>
       <td>${carCell}</td><td>${drvCell}</td><td>${esc(b.driver)}<br><span class="mono" style="font-size:11.5px;color:var(--ink-soft)">${esc(b.phone||"")}</span></td>
-      <td style="text-align:center">${b.pax||"—"}</td><td>${esc(b.purpose)}</td>
+      <td><span class="reqbadge ${b.reqType==="patient"?"patient":"admin"}">${esc(REQ_LABEL[b.reqType]||"—")}</span><br><span style="font-size:11.5px;color:var(--ink-soft)">${esc(b.dept||"")}</span></td>
+      <td>${esc(b.purpose||"")} <a class="req-detail" data-detail="${b.id}">รายละเอียด${b.fileUrl?" · ไฟล์":""}</a></td>
       <td><span class="tag ${b.status}">${statusTH[b.status]}</span></td><td><div class="act-row">${acts.join("")}</div></td></tr>`;
   }).join("");
   const carOpts=cars.map(c=>`<option value="${c.id}" ${String(filters.carId)===String(c.id)?"selected":""}>${esc(c.name)} (${esc(c.plate)})</option>`).join("");
@@ -555,7 +714,7 @@ function renderAdmin(){
           <option value="approved" ${filters.status==="approved"?"selected":""}>อนุมัติแล้ว</option>
           <option value="cancelled" ${filters.status==="cancelled"?"selected":""}>ยกเลิกแล้ว</option></select></div>
         <div class="field" style="align-self:end"><button class="btn btn-ghost btn-sm" id="f-clear">ล้างตัวกรอง</button></div></div>
-      ${list.length?`<div style="overflow-x:auto"><table><thead><tr><th>วันที่</th><th>เวลา</th><th>รถ</th><th>คนขับ</th><th>ผู้ขอ</th><th>จำนวน</th><th>วัตถุประสงค์</th><th>สถานะ</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
+      ${list.length?`<div style="overflow-x:auto"><table><thead><tr><th>วันที่</th><th>เวลา</th><th>รถ</th><th>คนขับ</th><th>ผู้ขอ</th><th>ประเภท</th><th>รายละเอียด</th><th>สถานะ</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
         :`<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><div>ยังไม่มีรายการตามเงื่อนไขนี้</div></div>`}
     </div>
     <div class="panel pad" style="margin-top:18px"><div class="eyebrow">ทะเบียนรถ</div><h2 class="sec" style="margin:6px 0 16px">จัดการรถในระบบ (${cars.length} คัน)</h2>
@@ -581,6 +740,7 @@ function renderAdmin(){
   document.getElementById("f-status").addEventListener("change",e=>{filters.status=e.target.value;renderAdmin();});
   document.getElementById("f-clear").addEventListener("click",()=>{filters={date:"",carId:"",status:""};renderAdmin();});
   el.querySelectorAll("[data-assign]").forEach(b=>b.addEventListener("click",()=>assignCar(b.dataset.assign)));
+  el.querySelectorAll("[data-detail]").forEach(b=>b.addEventListener("click",()=>showDetails(b.dataset.detail)));
   el.querySelectorAll("[data-approve]").forEach(b=>b.addEventListener("click",()=>updateStatus(b.dataset.approve,"approved")));
   el.querySelectorAll("[data-cancel]").forEach(b=>b.addEventListener("click",()=>updateStatus(b.dataset.cancel,"cancelled")));
   el.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>deleteBooking(b.dataset.del)));
