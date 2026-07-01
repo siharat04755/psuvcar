@@ -88,6 +88,7 @@
   .req-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .assign-sel{width:auto;min-width:220px;max-width:300px;padding:8px 10px;font-size:13.5px}
   #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(1200px 600px at 50% -10%, #1E8C6E22, transparent), var(--bg)}
+  #login-screen[hidden]{display:none!important}
   .login-card{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:38px 32px;max-width:380px;width:100%;text-align:center}
   .login-logo{width:64px;height:64px;border-radius:16px;background:var(--brand);color:#fff;display:grid;place-items:center;margin:0 auto 18px}
   .login-logo svg{width:36px;height:36px}
@@ -359,7 +360,7 @@ function signOut(){ try{ google.accounts.id.disableAutoSelect(); }catch(e){} idT
 function renderLogin(msg){
   const hdr=document.querySelector("header.top"), wrap=document.querySelector(".wrap");
   if(hdr) hdr.style.display="none"; if(wrap) wrap.style.display="none";
-  const el=document.getElementById("login-screen"); if(!el) return; el.hidden=false;
+  const el=document.getElementById("login-screen"); if(!el) return; el.hidden=false; el.style.display="flex";
   el.innerHTML=`<div class="login-card">
     <div class="login-logo">${carSvg}</div>
     <h1>รถส่วนกลาง</h1>
@@ -371,7 +372,7 @@ function renderLogin(msg){
   </div>`;
   try{ google.accounts.id.renderButton(document.getElementById("gbtn"),{theme:"filled_blue",size:"large",shape:"pill",text:"signin_with",width:260}); }catch(e){}
 }
-function hideLogin(){ const el=document.getElementById("login-screen"); if(el) el.hidden=true; const hdr=document.querySelector("header.top"), wrap=document.querySelector(".wrap"); if(hdr) hdr.style.display=""; if(wrap) wrap.style.display=""; }
+function hideLogin(){ const el=document.getElementById("login-screen"); if(el){ el.hidden=true; el.style.display="none"; } const hdr=document.querySelector("header.top"), wrap=document.querySelector(".wrap"); if(hdr) hdr.style.display=""; if(wrap) wrap.style.display=""; }
 
 function renderTopBar(){
   const ident=document.getElementById("ident");
@@ -690,9 +691,9 @@ function render(){
 }
 (async()=>{
   if(GOOGLE){
-    me=lsGet("fleet:me");           // แสดงชื่อชั่วคราวระหว่างรอ token (ยังต้องลงชื่อเข้าใช้จริง)
-    initGoogle();                   // แสดงหน้าล็อกอิน + ขอ token จาก Google
-    // เมื่อล็อกอินสำเร็จ handleCredential จะเรียก refresh() เอง
+    renderLogin("");                // ซ่อนแอป แสดงหน้าล็อกอินทันที (ปุ่มขึ้นเมื่อ Google โหลดเสร็จ)
+    me=lsGet("fleet:me");
+    initGoogle();
     if(REMOTE) setInterval(()=>{ if(view!=="book" && !busy && me && idToken) refresh(); }, 20000);
     return;
   }
